@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanzas Ospino</title>
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --card: #ffffff;
+    --ink: #1f2a24;
+    --muted: #6b746e;
+    --line: #e3e0d8;
+    --green: #1f7a4d;
+    --green-soft: #e3f1e9;
+    --red: #b43c32;
+    --red-soft: #f8e5e2;
+    --accent: #234b3a;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 22px 20px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+  header .wrap { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 0; }
+  header h1 { margin: 0; font-size: 1.5rem; letter-spacing: .3px; }
+  header p { margin: 2px 0 0; opacity: .8; font-size: .9rem; }
+  .month-picker { display: flex; align-items: center; gap: 8px; }
+  .month-picker button {
+    background: rgba(255,255,255,.15); color: #fff; border: 0; border-radius: 8px;
+    width: 34px; height: 34px; font-size: 1.1rem; cursor: pointer;
+  }
+  .month-picker button:hover { background: rgba(255,255,255,.28); }
+  .month-picker select {
+    background: rgba(255,255,255,.15); color: #fff; border: 0; border-radius: 8px;
+    padding: 8px 10px; font-size: .95rem; cursor: pointer;
+  }
+  .month-picker select option { color: var(--ink); }
+  main.wrap { padding-top: 22px; padding-bottom: 40px; }
+  #month-select { min-width: 130px; }
+  .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
+  .card { background: var(--card); border-radius: var(--radius); padding: 18px; border: 1px solid var(--line); }
+  .stat .label { color: var(--muted); font-size: .85rem; }
+  .stat .value { font-size: 1.55rem; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .layout { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+  h2 { font-size: 1.05rem; margin: 0 0 14px; }
+  form label { display: block; font-size: .82rem; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea {
+    width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 9px;
+    font-size: .95rem; font-family: inherit; background: #fff; color: var(--ink);
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .type-toggle input { display: none; }
+  .type-toggle label {
+    margin: 0; text-align: center; padding: 10px; border-radius: 9px; border: 1px solid var(--line);
+    cursor: pointer; font-weight: 600; color: var(--muted); font-size: .92rem;
+  }
+  #tipo-ingreso:checked + label { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+  #tipo-gasto:checked + label { background: var(--red-soft); color: var(--red); border-color: var(--red); }
+  .btn {
+    display: inline-block; border: 0; border-radius: 9px; padding: 11px 16px; font-size: .95rem;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; margin-top: 14px; }
+  .btn-primary:hover { filter: brightness(1.15); }
+  .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+  .btn-ghost:hover { background: #f0ede6; }
+  .btn-small { padding: 7px 11px; font-size: .85rem; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .toolbar .filters { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+  .toolbar .filters input, .toolbar .filters select { width: auto; flex: 1; min-width: 130px; padding: 8px 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: .8rem; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  td.amount { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th.amount { text-align: right; }
+  .chip { display: inline-block; padding: 2px 9px; border-radius: 99px; background: #efece5; font-size: .8rem; }
+  .actions { white-space: nowrap; text-align: right; }
+  .icon-btn { background: none; border: 0; cursor: pointer; color: var(--muted); font-size: .85rem; padding: 4px 6px; border-radius: 6px; }
+  .icon-btn:hover { background: #f0ede6; color: var(--ink); }
+  .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+  .table-scroll { overflow-x: auto; }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  @media (max-width: 860px) { .charts { grid-template-columns: 1fr; } }
+  .bar-row { display: grid; grid-template-columns: 120px 1fr 110px; gap: 10px; align-items: center; margin: 8px 0; font-size: .88rem; }
+  .bar-track { background: #f0ede6; border-radius: 6px; height: 12px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--red); border-radius: 6px; }
+  .bar-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .year-chart { display: flex; align-items: flex-end; gap: 6px; height: 170px; padding-top: 10px; }
+  .year-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .year-bars { display: flex; gap: 2px; align-items: flex-end; height: 140px; width: 100%; justify-content: center; }
+  .year-bars div { width: 45%; max-width: 14px; border-radius: 3px 3px 0 0; min-height: 1px; }
+  .yb-in { background: var(--green); }
+  .yb-out { background: var(--red); }
+  .year-col span { font-size: .72rem; color: var(--muted); }
+  .year-col.current span { color: var(--ink); font-weight: 700; }
+  .legend { display: flex; gap: 14px; font-size: .8rem; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .backup { margin-top: 18px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .backup p { margin: 0 8px 0 0; color: var(--muted); font-size: .85rem; flex-basis: 100%; }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 9px; font-size: .9rem;
+    transition: transform .25s; z-index: 10;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .editing-note { font-size: .82rem; color: var(--accent); margin-top: 8px; display: none; }
+  .editing-note a { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; padding-bottom: 30px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div>
+      <h1>Finanzas Ospino</h1>
+      <p>Control de ingresos y gastos</p>
+    </div>
+    <div class="month-picker">
+      <button id="prev-month" title="Mes anterior">‹</button>
+      <select id="month-select"></select>
+      <select id="year-select"></select>
+      <button id="next-month" title="Mes siguiente">›</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="grid-cards">
+    <div class="card stat"><div class="label">Ingresos del mes</div><div class="value pos" id="stat-in">$0</div></div>
+    <div class="card stat"><div class="label">Gastos del mes</div><div class="value neg" id="stat-out">$0</div></div>
+    <div class="card stat"><div class="label">Balance del mes</div><div class="value" id="stat-balance">$0</div></div>
+    <div class="card stat"><div class="label">Saldo acumulado</div><div class="value" id="stat-total">$0</div></div>
+  </section>
+
+  <section class="layout">
+    <div class="card">
+      <h2 id="form-title">Nuevo movimiento</h2>
+      <form id="tx-form" autocomplete="off">
+        <div class="type-toggle">
+          <input type="radio" name="tipo" id="tipo-gasto" value="gasto" checked>
+          <label for="tipo-gasto">Gasto</label>
+          <input type="radio" name="tipo" id="tipo-ingreso" value="ingreso">
+          <label for="tipo-ingreso">Ingreso</label>
+        </div>
+
+        <label for="monto">Monto (COP)</label>
+        <input type="text" id="monto" inputmode="numeric" placeholder="0" required>
+
+        <div class="row-2">
+          <div>
+            <label for="fecha">Fecha</label>
+            <input type="date" id="fecha" required>
+          </div>
+          <div>
+            <label for="categoria">Categoría</label>
+            <select id="categoria"></select>
+          </div>
+        </div>
+
+        <label for="descripcion">Descripción</label>
+        <input type="text" id="descripcion" placeholder="Ej: Mercado, arriendo, salario…" maxlength="120">
+
+        <label for="metodo">Medio de pago</label>
+        <select id="metodo">
+          <option>Efectivo</option>
+          <option>Tarjeta débito</option>
+          <option>Tarjeta crédito</option>
+          <option>Transferencia</option>
+          <option>Nequi / Daviplata</option>
+          <option>Otro</option>
+        </select>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">Guardar movimiento</button>
+        <div class="editing-note" id="editing-note">Estás editando un movimiento. <a id="cancel-edit">Cancelar</a></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2 style="margin:0">Movimientos</h2>
+        <div class="filters">
+          <input type="search" id="search" placeholder="Buscar…">
+          <select id="filter-type">
+            <option value="">Todos</option>
+            <option value="ingreso">Ingresos</option>
+            <option value="gasto">Gastos</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th class="amount">Monto</th><th></th></tr>
+          </thead>
+          <tbody id="tx-body"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="empty-state">No hay movimientos este mes. Agrega el primero en el formulario.</div>
+    </div>
+  </section>
+
+  <section class="charts">
+    <div class="card">
+      <h2>Gastos por categoría</h2>
+      <div id="cat-chart"></div>
+    </div>
+    <div class="card">
+      <h2>Resumen del año <span id="year-label"></span></h2>
+      <div class="year-chart" id="year-chart"></div>
+      <div class="legend"><span><i style="background:var(--green)"></i>Ingresos</span><span><i style="background:var(--red)"></i>Gastos</span></div>
+    </div>
+  </section>
+
+  <section class="card backup">
+    <p>Tus datos se guardan solo en este navegador. Descarga una copia de seguridad de vez en cuando, o para pasarlos a otro dispositivo.</p>
+    <button class="btn btn-ghost btn-small" id="export-json">Descargar copia (.json)</button>
+    <button class="btn btn-ghost btn-small" id="import-json">Restaurar copia</button>
+    <button class="btn btn-ghost btn-small" id="export-csv">Exportar a Excel (.csv)</button>
+    <input type="file" id="import-file" accept=".json,application/json" hidden>
+  </section>
+</main>
+
+<footer>Finanzas Ospino</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'finanzas-ospino-v1';
+  const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const CATEGORIAS = {
+    gasto: ['Alimentación','Vivienda','Servicios','Transporte','Salud','Educación','Entretenimiento','Ropa','Deudas','Ahorro','Otros'],
+    ingreso: ['Salario','Negocio','Freelance','Inversiones','Regalos','Otros']
+  };
+
+  const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+  const money = n => fmt.format(n);
+
+  let memoryStore = null;
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return memoryStore || [];
+    }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(txs)); }
+    catch (e) { memoryStore = txs; }
+  }
+
+  let txs = load();
+  const today = new Date();
+  let viewMonth = today.getMonth();
+  let viewYear = today.getFullYear();
+  let editingId = null;
+
+  const $ = id => document.getElementById(id);
+  const form = $('tx-form');
+
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function isoToday() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function currentType() { return form.querySelector('input[name="tipo"]:checked').value; }
+
+  function fillCategories(selected) {
+    const sel = $('categoria');
+    sel.innerHTML = CATEGORIAS[currentType()].map(c => `<option${c === selected ? ' selected' : ''}>${c}</option>`).join('');
+  }
+
+  function parseAmount(str) {
+    return Number(String(str).replace(/[^\d]/g, '')) || 0;
+  }
+
+  $('monto').addEventListener('input', e => {
+    const n = parseAmount(e.target.value);
+    e.target.value = n ? n.toLocaleString('es-CO') : '';
+  });
+
+  form.querySelectorAll('input[name="tipo"]').forEach(r => r.addEventListener('change', () => fillCategories()));
+
+  function resetForm() {
+    editingId = null;
+    form.reset();
+    $('tipo-gasto').checked = true;
+    fillCategories();
+    $('fecha').value = isoToday();
+    $('form-title').textContent = 'Nuevo movimiento';
+    $('submit-btn').textContent = 'Guardar movimiento';
+    $('editing-note').style.display = 'none';
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const monto = parseAmount($('monto').value);
+    if (!monto) { toast('Escribe un monto mayor a cero'); return; }
+    const data = {
+      tipo: currentType(),
+      monto,
+      fecha: $('fecha').value,
+      categoria: $('categoria').value,
+      descripcion: $('descripcion').value.trim(),
+      metodo: $('metodo').value
+    };
+    if (editingId) {
+      const i = txs.findIndex(t => t.id === editingId);
+      if (i > -1) txs[i] = { ...txs[i], ...data };
+      toast('Movimiento actualizado');
+    } else {
+      txs.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), ...data });
+      toast('Movimiento guardado');
+    }
+    save();
+    const [y, m] = data.fecha.split('-').map(Number);
+    viewYear = y; viewMonth = m - 1;
+    resetForm();
+    render();
+  });
+
+  $('cancel-edit').addEventListener('click', resetForm);
+
+  function startEdit(id) {
+    const t = txs.find(x => x.id === id);
+    if (!t) return;
+    editingId = id;
+    $(t.tipo === 'ingreso' ? 'tipo-ingreso' : 'tipo-gasto').checked = true;
+    fillCategories(t.categoria);
+    $('monto').value = t.monto.toLocaleString('es-CO');
+    $('fecha').value = t.fecha;
+    $('descripcion').value = t.descripcion;
+    $('metodo').value = t.metodo || 'Efectivo';
+    $('form-title').textContent = 'Editar movimiento';
+    $('submit-btn').textContent = 'Guardar cambios';
+    $('editing-note').style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function remove(id) {
+    const t = txs.find(x => x.id === id);
+    if (!t) return;
+    const ok = window.confirm ? confirm(`¿Eliminar "${t.descripcion || t.categoria}" por ${money(t.monto)}?`) : true;
+    if (!ok) return;
+    txs = txs.filter(x => x.id !== id);
+    save();
+    if (editingId === id) resetForm();
+    render();
+    toast('Movimiento eliminado');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function inMonth(t, y, m) {
+    const [ty, tm] = t.fecha.split('-').map(Number);
+    return ty === y && tm - 1 === m;
+  }
+
+  function fillPickers() {
+    $('month-select').innerHTML = MESES.map((n, i) => `<option value="${i}"${i === viewMonth ? ' selected' : ''}>${n}</option>`).join('');
+    const years = new Set([today.getFullYear(), viewYear]);
+    txs.forEach(t => years.add(Number(t.fecha.slice(0, 4))));
+    const sorted = [...years].sort((a, b) => b - a);
+    $('year-select').innerHTML = sorted.map(y => `<option${y === viewYear ? ' selected' : ''}>${y}</option>`).join('');
+  }
+
+  function render() {
+    fillPickers();
+    const monthTxs = txs.filter(t => inMonth(t, viewYear, viewMonth));
+    const ingresos = monthTxs.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0);
+    const gastos = monthTxs.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.monto, 0);
+    const balance = ingresos - gastos;
+    const total = txs.reduce((s, t) => s + (t.tipo === 'ingreso' ? t.monto : -t.monto), 0);
+
+    $('stat-in').textContent = money(ingresos);
+    $('stat-out').textContent = money(gastos);
+    $('stat-balance').textContent = money(balance);
+    $('stat-balance').className = 'value ' + (balance >= 0 ? 'pos' : 'neg');
+    $('stat-total').textContent = money(total);
+    $('stat-total').className = 'value ' + (total >= 0 ? 'pos' : 'neg');
+
+    // Tabla
+    const q = $('search').value.trim().toLowerCase();
+    const ft = $('filter-type').value;
+    const rows = monthTxs
+      .filter(t => !ft || t.tipo === ft)
+      .filter(t => !q || (t.descripcion + ' ' + t.categoria + ' ' + (t.metodo || '')).toLowerCase().includes(q))
+      .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id.localeCompare(a.id));
+
+    $('tx-body').innerHTML = rows.map(t => {
+      const [y, m, d] = t.fecha.split('-');
+      const sign = t.tipo === 'ingreso' ? '+' : '−';
+      return `<tr>
+        <td>${d}/${m}</td>
+        <td>${escapeHtml(t.descripcion || '—')}<div style="color:var(--muted);font-size:.78rem">${escapeHtml(t.metodo || '')}</div></td>
+        <td><span class="chip">${escapeHtml(t.categoria)}</span></td>
+        <td class="amount ${t.tipo === 'ingreso' ? 'pos' : 'neg'}">${sign} ${money(t.monto)}</td>
+        <td class="actions">
+          <button class="icon-btn" data-edit="${t.id}" title="Editar">Editar</button>
+          <button class="icon-btn" data-del="${t.id}" title="Eliminar">Eliminar</button>
+        </td>
+      </tr>`;
+    }).join('');
+    $('empty-state').style.display = rows.length ? 'none' : 'block';
+    $('empty-state').textContent = monthTxs.length
+      ? 'Ningún movimiento coincide con la búsqueda.'
+      : 'No hay movimientos este mes. Agrega el primero en el formulario.';
+
+    // Gastos por categoría
+    const byCat = {};
+    monthTxs.filter(t => t.tipo === 'gasto').forEach(t => { byCat[t.categoria] = (byCat[t.categoria] || 0) + t.monto; });
+    const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+    const maxCat = cats.length ? cats[0][1] : 0;
+    $('cat-chart').innerHTML = cats.length
+      ? cats.map(([c, v]) => `<div class="bar-row">
+          <span class="bar-name">${escapeHtml(c)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${(v / maxCat * 100).toFixed(1)}%"></div></div>
+          <span class="bar-val">${money(v)}</span>
+        </div>`).join('')
+      : '<div class="empty">Sin gastos registrados este mes.</div>';
+
+    // Resumen anual
+    $('year-label').textContent = viewYear;
+    const yearData = MESES.map((_, i) => {
+      const mt = txs.filter(t => inMonth(t, viewYear, i));
+      return {
+        inc: mt.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0),
+        out: mt.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.monto, 0)
+      };
+    });
+    const maxY = Math.max(1, ...yearData.map(d => Math.max(d.inc, d.out)));
+    $('year-chart').innerHTML = yearData.map((d, i) => `
+      <div class="year-col${i === viewMonth ? ' current' : ''}" title="${MESES[i]}: ingresos ${money(d.inc)}, gastos ${money(d.out)}">
+        <div class="year-bars">
+          <div class="yb-in" style="height:${(d.inc / maxY * 100).toFixed(1)}%"></div>
+          <div class="yb-out" style="height:${(d.out / maxY * 100).toFixed(1)}%"></div>
+        </div>
+        <span>${MESES[i].slice(0, 3)}</span>
+      </div>`).join('');
+  }
+
+  $('tx-body').addEventListener('click', e => {
+    const ed = e.target.closest('[data-edit]');
+    const dl = e.target.closest('[data-del]');
+    if (ed) startEdit(ed.dataset.edit);
+    if (dl) remove(dl.dataset.del);
+  });
+
+  $('search').addEventListener('input', render);
+  $('filter-type').addEventListener('change', render);
+  $('month-select').addEventListener('change', e => { viewMonth = Number(e.target.value); render(); });
+  $('year-select').addEventListener('change', e => { viewYear = Number(e.target.value); render(); });
+  $('prev-month').addEventListener('click', () => { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } render(); });
+  $('next-month').addEventListener('click', () => { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } render(); });
+
+  function download(name, content, type) {
+    const blob = new Blob([content], { type });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  $('export-json').addEventListener('click', () => {
+    download(`finanzas-ospino-${isoToday()}.json`, JSON.stringify({ app: 'Finanzas Ospino', version: 1, movimientos: txs }, null, 2), 'application/json');
+    toast('Copia descargada');
+  });
+
+  $('export-csv').addEventListener('click', () => {
+    const head = ['Fecha', 'Tipo', 'Categoría', 'Descripción', 'Medio de pago', 'Monto'];
+    const esc = v => `"${String(v).replace(/"/g, '""')}"`;
+    const lines = [...txs].sort((a, b) => a.fecha.localeCompare(b.fecha))
+      .map(t => [t.fecha, t.tipo, t.categoria, t.descripcion, t.metodo || '', t.tipo === 'gasto' ? -t.monto : t.monto].map(esc).join(';'));
+    download(`finanzas-ospino-${isoToday()}.csv`, '﻿' + [head.map(esc).join(';'), ...lines].join('\n'), 'text/csv;charset=utf-8');
+    toast('Archivo CSV descargado');
+  });
+
+  $('import-json').addEventListener('click', () => $('import-file').click());
+  $('import-file').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        const list = Array.isArray(data) ? data : data.movimientos;
+        if (!Array.isArray(list)) throw new Error();
+        const valid = list.filter(t => t && t.id && t.fecha && t.tipo && typeof t.monto === 'number');
+        const existing = new Set(txs.map(t => t.id));
+        const nuevos = valid.filter(t => !existing.has(t.id));
+        txs = txs.concat(nuevos);
+        save();
+        render();
+        toast(`${nuevos.length} movimiento(s) restaurado(s)`);
+      } catch (err) {
+        toast('El archivo no es una copia válida');
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  resetForm();
+  render();
+})();
+</script>
+</body>
+</html>
