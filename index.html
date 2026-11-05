@@ -55,7 +55,18 @@
   .pos { color: var(--green); }
   .neg { color: var(--red); }
   .layout { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+  .layout > *, .charts > * { min-width: 0; }
   @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+  @media (max-width: 520px) { .bar-row { grid-template-columns: 90px 1fr 95px; } }
+  .sub { color: var(--muted); font-size: .78rem; }
+  .sub-cat { display: none; }
+  @media (max-width: 600px) {
+    th:nth-child(3), td:nth-child(3) { display: none; }
+    .sub-cat { display: inline; }
+    td.actions { white-space: normal; width: 1%; }
+    td.actions .icon-btn { display: block; width: 100%; text-align: right; }
+    td.amount { font-size: .88rem; }
+  }
   h2 { font-size: 1.05rem; margin: 0 0 14px; }
   form label { display: block; font-size: .82rem; color: var(--muted); margin: 10px 0 4px; }
   input, select, textarea {
@@ -123,6 +134,35 @@
   .editing-note { font-size: .82rem; color: var(--accent); margin-top: 8px; display: none; }
   .editing-note a { color: var(--accent); cursor: pointer; text-decoration: underline; }
   footer { text-align: center; color: var(--muted); font-size: .8rem; padding-bottom: 30px; }
+  .header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .user-box { display: flex; align-items: center; gap: 8px; font-size: .82rem; }
+  .user-box img { width: 28px; height: 28px; border-radius: 50%; }
+  .user-box button {
+    background: rgba(255,255,255,.15); color: #fff; border: 0; border-radius: 8px;
+    padding: 7px 10px; font-size: .82rem; cursor: pointer; font-family: inherit;
+  }
+  .user-box button:hover { background: rgba(255,255,255,.28); }
+  .sync { font-size: .78rem; opacity: .85; }
+  .sync::before { content: "●"; margin-right: 4px; color: #7fd6a4; }
+  .sync.offline::before { color: #f2c46d; }
+  .sync.error::before { color: #ff8a80; }
+  .login {
+    position: fixed; inset: 0; background: var(--bg); z-index: 20;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .login .card { max-width: 380px; width: 100%; text-align: center; padding: 34px 26px; }
+  .login h1 { margin: 0 0 6px; color: var(--accent); font-size: 1.6rem; }
+  .login p { color: var(--muted); margin: 0 0 22px; font-size: .95rem; }
+  .btn-google {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+    background: #fff; border: 1px solid var(--line); color: var(--ink); padding: 12px 16px;
+  }
+  .btn-google:hover { background: #f7f6f2; }
+  .btn-google svg { width: 18px; height: 18px; }
+  .login .error { color: var(--red); font-size: .85rem; margin: 14px 0 0; min-height: 1em; }
+  .banner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; background: #fff8e6; border-color: #f0dca8; }
+  .banner p { margin: 0; flex: 1; min-width: 220px; font-size: .92rem; }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -133,16 +173,44 @@
       <h1>Finanzas Ospino</h1>
       <p>Control de ingresos y gastos</p>
     </div>
-    <div class="month-picker">
-      <button id="prev-month" title="Mes anterior">‹</button>
-      <select id="month-select"></select>
-      <select id="year-select"></select>
-      <button id="next-month" title="Mes siguiente">›</button>
+    <div class="header-right">
+      <div class="month-picker">
+        <button id="prev-month" title="Mes anterior">‹</button>
+        <select id="month-select"></select>
+        <select id="year-select"></select>
+        <button id="next-month" title="Mes siguiente">›</button>
+      </div>
+      <div class="user-box">
+        <img id="user-photo" alt="" hidden referrerpolicy="no-referrer">
+        <div>
+          <div id="user-name"></div>
+          <div class="sync" id="sync-status">Conectando…</div>
+        </div>
+        <button id="logout">Salir</button>
+      </div>
     </div>
   </div>
 </header>
 
+<div class="login" id="login-screen">
+  <div class="card">
+    <h1>Finanzas Ospino</h1>
+    <p id="login-text">Cargando…</p>
+    <button class="btn btn-google" id="login-btn" hidden>
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Entrar con Google
+    </button>
+    <p class="error" id="login-error"></p>
+  </div>
+</div>
+
 <main class="wrap">
+  <section class="card banner" id="migrate-banner" hidden>
+    <p id="migrate-text"></p>
+    <button class="btn btn-primary btn-small" id="migrate-yes" style="width:auto;margin:0">Subir a la nube</button>
+    <button class="btn btn-ghost btn-small" id="migrate-no">Ahora no</button>
+  </section>
+
   <section class="grid-cards">
     <div class="card stat"><div class="label">Ingresos del mes</div><div class="value pos" id="stat-in">$0</div></div>
     <div class="card stat"><div class="label">Gastos del mes</div><div class="value neg" id="stat-out">$0</div></div>
@@ -230,7 +298,7 @@
   </section>
 
   <section class="card backup">
-    <p>Tus datos se guardan solo en este navegador. Descarga una copia de seguridad de vez en cuando, o para pasarlos a otro dispositivo.</p>
+    <p>Tus datos se guardan en la nube y se sincronizan en todos los dispositivos donde entres con tu cuenta de Google. También puedes descargar una copia de seguridad.</p>
     <button class="btn btn-ghost btn-small" id="export-json">Descargar copia (.json)</button>
     <button class="btn btn-ghost btn-small" id="import-json">Restaurar copia</button>
     <button class="btn btn-ghost btn-small" id="export-csv">Exportar a Excel (.csv)</button>
@@ -241,299 +309,425 @@
 <footer>Finanzas Ospino</footer>
 <div class="toast" id="toast"></div>
 
-<script>
-(function () {
-  const STORAGE_KEY = 'finanzas-ospino-v1';
-  const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const CATEGORIAS = {
-    gasto: ['Alimentación','Vivienda','Servicios','Transporte','Salud','Educación','Entretenimiento','Ropa','Deudas','Ahorro','Otros'],
-    ingreso: ['Salario','Negocio','Freelance','Inversiones','Regalos','Otros']
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+  onAuthStateChanged, signOut
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {
+  initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager,
+  collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBanbf0Dmc5v2ulX7Pqwk8sl8IbenjhfdU",
+  authDomain: "finanzas-ospino.firebaseapp.com",
+  projectId: "finanzas-ospino",
+  storageBucket: "finanzas-ospino.firebasestorage.app",
+  messagingSenderId: "730494820960",
+  appId: "1:730494820960:web:7a32ebc66daf6374b05905"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+let db;
+try {
+  db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+} catch (e) {
+  db = getFirestore(app);
+}
+
+const LOCAL_KEY = 'finanzas-ospino-v1';
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const CATEGORIAS = {
+  gasto: ['Alimentación','Vivienda','Servicios','Transporte','Salud','Educación','Entretenimiento','Ropa','Deudas','Ahorro','Otros'],
+  ingreso: ['Salario','Negocio','Freelance','Inversiones','Regalos','Otros']
+};
+
+const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+const money = n => fmt.format(n);
+const $ = id => document.getElementById(id);
+const form = $('tx-form');
+
+let user = null;
+let txs = [];
+let unsubscribe = null;
+const today = new Date();
+let viewMonth = today.getMonth();
+let viewYear = today.getFullYear();
+let editingId = null;
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function setSync(text, cls) {
+  const s = $('sync-status');
+  s.textContent = text;
+  s.className = 'sync' + (cls ? ' ' + cls : '');
+}
+
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function txCol() { return collection(db, 'usuarios', user.uid, 'movimientos'); }
+function txDoc(id) { return doc(db, 'usuarios', user.uid, 'movimientos', id); }
+function clean(t) {
+  return {
+    tipo: t.tipo === 'ingreso' ? 'ingreso' : 'gasto',
+    monto: Number(t.monto) || 0,
+    fecha: String(t.fecha),
+    categoria: String(t.categoria || 'Otros'),
+    descripcion: String(t.descripcion || ''),
+    metodo: String(t.metodo || '')
   };
+}
+function writeError(err) {
+  console.error(err);
+  setSync('Error al guardar', 'error');
+  toast(err && err.code === 'permission-denied'
+    ? 'Sin permiso para guardar. Revisa las reglas de Firestore.'
+    : 'No se pudo guardar en la nube');
+}
 
-  const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
-  const money = n => fmt.format(n);
+/* ---------- Inicio de sesión ---------- */
+function showLogin(text) {
+  $('login-screen').hidden = false;
+  $('login-text').textContent = text;
+  $('login-btn').hidden = false;
+}
 
-  let memoryStore = null;
-  function load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return memoryStore || [];
-    }
-  }
-  function save() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(txs)); }
-    catch (e) { memoryStore = txs; }
-  }
-
-  let txs = load();
-  const today = new Date();
-  let viewMonth = today.getMonth();
-  let viewYear = today.getFullYear();
-  let editingId = null;
-
-  const $ = id => document.getElementById(id);
-  const form = $('tx-form');
-
-  function toast(msg) {
-    const t = $('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => t.classList.remove('show'), 2200);
-  }
-
-  function isoToday() {
-    const d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
-
-  function currentType() { return form.querySelector('input[name="tipo"]:checked').value; }
-
-  function fillCategories(selected) {
-    const sel = $('categoria');
-    sel.innerHTML = CATEGORIAS[currentType()].map(c => `<option${c === selected ? ' selected' : ''}>${c}</option>`).join('');
-  }
-
-  function parseAmount(str) {
-    return Number(String(str).replace(/[^\d]/g, '')) || 0;
-  }
-
-  $('monto').addEventListener('input', e => {
-    const n = parseAmount(e.target.value);
-    e.target.value = n ? n.toLocaleString('es-CO') : '';
-  });
-
-  form.querySelectorAll('input[name="tipo"]').forEach(r => r.addEventListener('change', () => fillCategories()));
-
-  function resetForm() {
-    editingId = null;
-    form.reset();
-    $('tipo-gasto').checked = true;
-    fillCategories();
-    $('fecha').value = isoToday();
-    $('form-title').textContent = 'Nuevo movimiento';
-    $('submit-btn').textContent = 'Guardar movimiento';
-    $('editing-note').style.display = 'none';
-  }
-
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    const monto = parseAmount($('monto').value);
-    if (!monto) { toast('Escribe un monto mayor a cero'); return; }
-    const data = {
-      tipo: currentType(),
-      monto,
-      fecha: $('fecha').value,
-      categoria: $('categoria').value,
-      descripcion: $('descripcion').value.trim(),
-      metodo: $('metodo').value
-    };
-    if (editingId) {
-      const i = txs.findIndex(t => t.id === editingId);
-      if (i > -1) txs[i] = { ...txs[i], ...data };
-      toast('Movimiento actualizado');
+$('login-btn').addEventListener('click', async () => {
+  $('login-error').textContent = '';
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment') {
+      signInWithRedirect(auth, provider);
+    } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+      // el usuario cerró la ventana
+    } else if (err.code === 'auth/unauthorized-domain') {
+      $('login-error').textContent = 'Este dominio no está autorizado en Firebase (Authentication → Configuración → Dominios autorizados).';
     } else {
-      txs.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), ...data });
-      toast('Movimiento guardado');
+      $('login-error').textContent = 'No se pudo iniciar sesión (' + (err.code || err.message) + ').';
     }
-    save();
-    const [y, m] = data.fecha.split('-').map(Number);
-    viewYear = y; viewMonth = m - 1;
-    resetForm();
+  }
+});
+
+getRedirectResult(auth).catch(err => {
+  $('login-error').textContent = 'No se pudo iniciar sesión (' + (err.code || err.message) + ').';
+});
+
+$('logout').addEventListener('click', () => signOut(auth));
+
+onAuthStateChanged(auth, u => {
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  user = u;
+  txs = [];
+  resetForm();
+  if (!u) {
+    showLogin('Entra con tu cuenta de Google para ver tus finanzas en cualquier dispositivo.');
     render();
-  });
-
-  $('cancel-edit').addEventListener('click', resetForm);
-
-  function startEdit(id) {
-    const t = txs.find(x => x.id === id);
-    if (!t) return;
-    editingId = id;
-    $(t.tipo === 'ingreso' ? 'tipo-ingreso' : 'tipo-gasto').checked = true;
-    fillCategories(t.categoria);
-    $('monto').value = t.monto.toLocaleString('es-CO');
-    $('fecha').value = t.fecha;
-    $('descripcion').value = t.descripcion;
-    $('metodo').value = t.metodo || 'Efectivo';
-    $('form-title').textContent = 'Editar movimiento';
-    $('submit-btn').textContent = 'Guardar cambios';
-    $('editing-note').style.display = 'block';
-    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
   }
-
-  function remove(id) {
-    const t = txs.find(x => x.id === id);
-    if (!t) return;
-    const ok = window.confirm ? confirm(`¿Eliminar "${t.descripcion || t.categoria}" por ${money(t.monto)}?`) : true;
-    if (!ok) return;
-    txs = txs.filter(x => x.id !== id);
-    save();
-    if (editingId === id) resetForm();
+  $('login-screen').hidden = true;
+  $('user-name').textContent = u.displayName || u.email || '';
+  if (u.photoURL) { $('user-photo').src = u.photoURL; $('user-photo').hidden = false; }
+  else { $('user-photo').hidden = true; }
+  setSync('Conectando…');
+  unsubscribe = onSnapshot(txCol(), { includeMetadataChanges: true }, snap => {
+    txs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (snap.metadata.hasPendingWrites) setSync('Guardando…');
+    else if (snap.metadata.fromCache) setSync('Sin conexión: se guardará al reconectar', 'offline');
+    else setSync('Sincronizado');
     render();
-    toast('Movimiento eliminado');
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-
-  function inMonth(t, y, m) {
-    const [ty, tm] = t.fecha.split('-').map(Number);
-    return ty === y && tm - 1 === m;
-  }
-
-  function fillPickers() {
-    $('month-select').innerHTML = MESES.map((n, i) => `<option value="${i}"${i === viewMonth ? ' selected' : ''}>${n}</option>`).join('');
-    const years = new Set([today.getFullYear(), viewYear]);
-    txs.forEach(t => years.add(Number(t.fecha.slice(0, 4))));
-    const sorted = [...years].sort((a, b) => b - a);
-    $('year-select').innerHTML = sorted.map(y => `<option${y === viewYear ? ' selected' : ''}>${y}</option>`).join('');
-  }
-
-  function render() {
-    fillPickers();
-    const monthTxs = txs.filter(t => inMonth(t, viewYear, viewMonth));
-    const ingresos = monthTxs.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0);
-    const gastos = monthTxs.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.monto, 0);
-    const balance = ingresos - gastos;
-    const total = txs.reduce((s, t) => s + (t.tipo === 'ingreso' ? t.monto : -t.monto), 0);
-
-    $('stat-in').textContent = money(ingresos);
-    $('stat-out').textContent = money(gastos);
-    $('stat-balance').textContent = money(balance);
-    $('stat-balance').className = 'value ' + (balance >= 0 ? 'pos' : 'neg');
-    $('stat-total').textContent = money(total);
-    $('stat-total').className = 'value ' + (total >= 0 ? 'pos' : 'neg');
-
-    // Tabla
-    const q = $('search').value.trim().toLowerCase();
-    const ft = $('filter-type').value;
-    const rows = monthTxs
-      .filter(t => !ft || t.tipo === ft)
-      .filter(t => !q || (t.descripcion + ' ' + t.categoria + ' ' + (t.metodo || '')).toLowerCase().includes(q))
-      .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id.localeCompare(a.id));
-
-    $('tx-body').innerHTML = rows.map(t => {
-      const [y, m, d] = t.fecha.split('-');
-      const sign = t.tipo === 'ingreso' ? '+' : '−';
-      return `<tr>
-        <td>${d}/${m}</td>
-        <td>${escapeHtml(t.descripcion || '—')}<div style="color:var(--muted);font-size:.78rem">${escapeHtml(t.metodo || '')}</div></td>
-        <td><span class="chip">${escapeHtml(t.categoria)}</span></td>
-        <td class="amount ${t.tipo === 'ingreso' ? 'pos' : 'neg'}">${sign} ${money(t.monto)}</td>
-        <td class="actions">
-          <button class="icon-btn" data-edit="${t.id}" title="Editar">Editar</button>
-          <button class="icon-btn" data-del="${t.id}" title="Eliminar">Eliminar</button>
-        </td>
-      </tr>`;
-    }).join('');
-    $('empty-state').style.display = rows.length ? 'none' : 'block';
-    $('empty-state').textContent = monthTxs.length
-      ? 'Ningún movimiento coincide con la búsqueda.'
-      : 'No hay movimientos este mes. Agrega el primero en el formulario.';
-
-    // Gastos por categoría
-    const byCat = {};
-    monthTxs.filter(t => t.tipo === 'gasto').forEach(t => { byCat[t.categoria] = (byCat[t.categoria] || 0) + t.monto; });
-    const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
-    const maxCat = cats.length ? cats[0][1] : 0;
-    $('cat-chart').innerHTML = cats.length
-      ? cats.map(([c, v]) => `<div class="bar-row">
-          <span class="bar-name">${escapeHtml(c)}</span>
-          <div class="bar-track"><div class="bar-fill" style="width:${(v / maxCat * 100).toFixed(1)}%"></div></div>
-          <span class="bar-val">${money(v)}</span>
-        </div>`).join('')
-      : '<div class="empty">Sin gastos registrados este mes.</div>';
-
-    // Resumen anual
-    $('year-label').textContent = viewYear;
-    const yearData = MESES.map((_, i) => {
-      const mt = txs.filter(t => inMonth(t, viewYear, i));
-      return {
-        inc: mt.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0),
-        out: mt.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.monto, 0)
-      };
-    });
-    const maxY = Math.max(1, ...yearData.map(d => Math.max(d.inc, d.out)));
-    $('year-chart').innerHTML = yearData.map((d, i) => `
-      <div class="year-col${i === viewMonth ? ' current' : ''}" title="${MESES[i]}: ingresos ${money(d.inc)}, gastos ${money(d.out)}">
-        <div class="year-bars">
-          <div class="yb-in" style="height:${(d.inc / maxY * 100).toFixed(1)}%"></div>
-          <div class="yb-out" style="height:${(d.out / maxY * 100).toFixed(1)}%"></div>
-        </div>
-        <span>${MESES[i].slice(0, 3)}</span>
-      </div>`).join('');
-  }
-
-  $('tx-body').addEventListener('click', e => {
-    const ed = e.target.closest('[data-edit]');
-    const dl = e.target.closest('[data-del]');
-    if (ed) startEdit(ed.dataset.edit);
-    if (dl) remove(dl.dataset.del);
+  }, err => {
+    console.error(err);
+    setSync('Error de conexión', 'error');
+    toast(err.code === 'permission-denied'
+      ? 'Sin permiso para leer los datos. Revisa las reglas de Firestore.'
+      : 'No se pudieron cargar los datos');
   });
+  checkLocalData();
+});
 
-  $('search').addEventListener('input', render);
-  $('filter-type').addEventListener('change', render);
-  $('month-select').addEventListener('change', e => { viewMonth = Number(e.target.value); render(); });
-  $('year-select').addEventListener('change', e => { viewYear = Number(e.target.value); render(); });
-  $('prev-month').addEventListener('click', () => { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } render(); });
-  $('next-month').addEventListener('click', () => { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } render(); });
+/* ---------- Migración de datos guardados en el dispositivo ---------- */
+function readLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter(t => t && t.id && t.fecha && t.tipo) : [];
+  } catch (e) { return []; }
+}
 
-  function download(name, content, type) {
-    const blob = new Blob([content], { type });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+function checkLocalData() {
+  const local = readLocal();
+  if (!local.length) { $('migrate-banner').hidden = true; return; }
+  $('migrate-text').textContent = `Hay ${local.length} movimiento(s) guardados solo en este dispositivo, de la versión anterior. ¿Quieres subirlos a tu cuenta para verlos en todos tus dispositivos?`;
+  $('migrate-banner').hidden = false;
+}
+
+async function uploadMany(list) {
+  for (let i = 0; i < list.length; i += 400) {
+    const batch = writeBatch(db);
+    list.slice(i, i + 400).forEach(t => batch.set(txDoc(String(t.id)), clean(t)));
+    await batch.commit();
   }
+}
 
-  $('export-json').addEventListener('click', () => {
-    download(`finanzas-ospino-${isoToday()}.json`, JSON.stringify({ app: 'Finanzas Ospino', version: 1, movimientos: txs }, null, 2), 'application/json');
-    toast('Copia descargada');
+$('migrate-yes').addEventListener('click', async () => {
+  const local = readLocal();
+  $('migrate-yes').disabled = true;
+  try {
+    const p = uploadMany(local);
+    // Sin conexión la promesa espera al servidor; los datos ya quedaron en cola.
+    await Promise.race([p, new Promise(r => setTimeout(r, 4000))]);
+    try {
+      localStorage.setItem(LOCAL_KEY + '-respaldo', localStorage.getItem(LOCAL_KEY) || '[]');
+      localStorage.removeItem(LOCAL_KEY);
+    } catch (e) {}
+    $('migrate-banner').hidden = true;
+    toast(`${local.length} movimiento(s) subidos a la nube`);
+  } catch (err) {
+    writeError(err);
+  } finally {
+    $('migrate-yes').disabled = false;
+  }
+});
+$('migrate-no').addEventListener('click', () => { $('migrate-banner').hidden = true; });
+
+/* ---------- Formulario ---------- */
+function isoToday() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function currentType() { return form.querySelector('input[name="tipo"]:checked').value; }
+function fillCategories(selected) {
+  $('categoria').innerHTML = CATEGORIAS[currentType()].map(c => `<option${c === selected ? ' selected' : ''}>${c}</option>`).join('');
+}
+function parseAmount(str) { return Number(String(str).replace(/[^\d]/g, '')) || 0; }
+
+$('monto').addEventListener('input', e => {
+  const n = parseAmount(e.target.value);
+  e.target.value = n ? n.toLocaleString('es-CO') : '';
+});
+form.querySelectorAll('input[name="tipo"]').forEach(r => r.addEventListener('change', () => fillCategories()));
+
+function resetForm() {
+  editingId = null;
+  form.reset();
+  $('tipo-gasto').checked = true;
+  fillCategories();
+  $('fecha').value = isoToday();
+  $('form-title').textContent = 'Nuevo movimiento';
+  $('submit-btn').textContent = 'Guardar movimiento';
+  $('editing-note').style.display = 'none';
+}
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  if (!user) return;
+  const monto = parseAmount($('monto').value);
+  if (!monto) { toast('Escribe un monto mayor a cero'); return; }
+  const data = clean({
+    tipo: currentType(),
+    monto,
+    fecha: $('fecha').value,
+    categoria: $('categoria').value,
+    descripcion: $('descripcion').value.trim(),
+    metodo: $('metodo').value
   });
-
-  $('export-csv').addEventListener('click', () => {
-    const head = ['Fecha', 'Tipo', 'Categoría', 'Descripción', 'Medio de pago', 'Monto'];
-    const esc = v => `"${String(v).replace(/"/g, '""')}"`;
-    const lines = [...txs].sort((a, b) => a.fecha.localeCompare(b.fecha))
-      .map(t => [t.fecha, t.tipo, t.categoria, t.descripcion, t.metodo || '', t.tipo === 'gasto' ? -t.monto : t.monto].map(esc).join(';'));
-    download(`finanzas-ospino-${isoToday()}.csv`, '﻿' + [head.map(esc).join(';'), ...lines].join('\n'), 'text/csv;charset=utf-8');
-    toast('Archivo CSV descargado');
-  });
-
-  $('import-json').addEventListener('click', () => $('import-file').click());
-  $('import-file').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        const list = Array.isArray(data) ? data : data.movimientos;
-        if (!Array.isArray(list)) throw new Error();
-        const valid = list.filter(t => t && t.id && t.fecha && t.tipo && typeof t.monto === 'number');
-        const existing = new Set(txs.map(t => t.id));
-        const nuevos = valid.filter(t => !existing.has(t.id));
-        txs = txs.concat(nuevos);
-        save();
-        render();
-        toast(`${nuevos.length} movimiento(s) restaurado(s)`);
-      } catch (err) {
-        toast('El archivo no es una copia válida');
-      }
-      e.target.value = '';
-    };
-    reader.readAsText(file);
-  });
-
+  const id = editingId || newId();
+  setDoc(txDoc(id), data).catch(writeError);
+  toast(editingId ? 'Movimiento actualizado' : 'Movimiento guardado');
+  const [y, m] = data.fecha.split('-').map(Number);
+  viewYear = y; viewMonth = m - 1;
   resetForm();
   render();
-})();
+});
+
+$('cancel-edit').addEventListener('click', resetForm);
+
+function startEdit(id) {
+  const t = txs.find(x => x.id === id);
+  if (!t) return;
+  editingId = id;
+  $(t.tipo === 'ingreso' ? 'tipo-ingreso' : 'tipo-gasto').checked = true;
+  fillCategories(t.categoria);
+  $('monto').value = Number(t.monto).toLocaleString('es-CO');
+  $('fecha').value = t.fecha;
+  $('descripcion').value = t.descripcion || '';
+  $('metodo').value = t.metodo || 'Efectivo';
+  $('form-title').textContent = 'Editar movimiento';
+  $('submit-btn').textContent = 'Guardar cambios';
+  $('editing-note').style.display = 'block';
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function remove(id) {
+  const t = txs.find(x => x.id === id);
+  if (!t) return;
+  if (!confirm(`¿Eliminar "${t.descripcion || t.categoria}" por ${money(t.monto)}?`)) return;
+  deleteDoc(txDoc(id)).catch(writeError);
+  if (editingId === id) resetForm();
+  toast('Movimiento eliminado');
+}
+
+/* ---------- Vista ---------- */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function inMonth(t, y, m) {
+  const [ty, tm] = String(t.fecha).split('-').map(Number);
+  return ty === y && tm - 1 === m;
+}
+function fillPickers() {
+  $('month-select').innerHTML = MESES.map((n, i) => `<option value="${i}"${i === viewMonth ? ' selected' : ''}>${n}</option>`).join('');
+  const years = new Set([today.getFullYear(), viewYear]);
+  txs.forEach(t => { const y = Number(String(t.fecha).slice(0, 4)); if (y) years.add(y); });
+  $('year-select').innerHTML = [...years].sort((a, b) => b - a).map(y => `<option${y === viewYear ? ' selected' : ''}>${y}</option>`).join('');
+}
+
+function render() {
+  fillPickers();
+  const monthTxs = txs.filter(t => inMonth(t, viewYear, viewMonth));
+  const ingresos = monthTxs.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0);
+  const gastos = monthTxs.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.monto, 0);
+  const balance = ingresos - gastos;
+  const total = txs.reduce((s, t) => s + (t.tipo === 'ingreso' ? t.monto : -t.monto), 0);
+
+  $('stat-in').textContent = money(ingresos);
+  $('stat-out').textContent = money(gastos);
+  $('stat-balance').textContent = money(balance);
+  $('stat-balance').className = 'value ' + (balance >= 0 ? 'pos' : 'neg');
+  $('stat-total').textContent = money(total);
+  $('stat-total').className = 'value ' + (total >= 0 ? 'pos' : 'neg');
+
+  const q = $('search').value.trim().toLowerCase();
+  const ft = $('filter-type').value;
+  const rows = monthTxs
+    .filter(t => !ft || t.tipo === ft)
+    .filter(t => !q || ((t.descripcion || '') + ' ' + t.categoria + ' ' + (t.metodo || '')).toLowerCase().includes(q))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id.localeCompare(a.id));
+
+  $('tx-body').innerHTML = rows.map(t => {
+    const [, m, d] = t.fecha.split('-');
+    const sign = t.tipo === 'ingreso' ? '+' : '−';
+    return `<tr>
+      <td>${d}/${m}</td>
+      <td>${escapeHtml(t.descripcion || '—')}<div class="sub"><span class="sub-cat">${escapeHtml(t.categoria)} · </span>${escapeHtml(t.metodo || '')}</div></td>
+      <td><span class="chip">${escapeHtml(t.categoria)}</span></td>
+      <td class="amount ${t.tipo === 'ingreso' ? 'pos' : 'neg'}">${sign} ${money(t.monto)}</td>
+      <td class="actions">
+        <button class="icon-btn" data-edit="${escapeHtml(t.id)}">Editar</button>
+        <button class="icon-btn" data-del="${escapeHtml(t.id)}">Eliminar</button>
+      </td>
+    </tr>`;
+  }).join('');
+  $('empty-state').style.display = rows.length ? 'none' : 'block';
+  $('empty-state').textContent = monthTxs.length
+    ? 'Ningún movimiento coincide con la búsqueda.'
+    : 'No hay movimientos este mes. Agrega el primero en el formulario.';
+
+  const byCat = {};
+  monthTxs.filter(t => t.tipo === 'gasto').forEach(t => { byCat[t.categoria] = (byCat[t.categoria] || 0) + t.monto; });
+  const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  const maxCat = cats.length ? cats[0][1] : 0;
+  $('cat-chart').innerHTML = cats.length
+    ? cats.map(([c, v]) => `<div class="bar-row">
+        <span class="bar-name">${escapeHtml(c)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(v / maxCat * 100).toFixed(1)}%"></div></div>
+        <span class="bar-val">${money(v)}</span>
+      </div>`).join('')
+    : '<div class="empty">Sin gastos registrados este mes.</div>';
+
+  $('year-label').textContent = viewYear;
+  const yearData = MESES.map((_, i) => {
+    const mt = txs.filter(t => inMonth(t, viewYear, i));
+    return {
+      inc: mt.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0),
+      out: mt.filter(t => t.tipo === 'gasto').reduce((s, t) => s + t.monto, 0)
+    };
+  });
+  const maxY = Math.max(1, ...yearData.map(d => Math.max(d.inc, d.out)));
+  $('year-chart').innerHTML = yearData.map((d, i) => `
+    <div class="year-col${i === viewMonth ? ' current' : ''}" title="${MESES[i]}: ingresos ${money(d.inc)}, gastos ${money(d.out)}">
+      <div class="year-bars">
+        <div class="yb-in" style="height:${(d.inc / maxY * 100).toFixed(1)}%"></div>
+        <div class="yb-out" style="height:${(d.out / maxY * 100).toFixed(1)}%"></div>
+      </div>
+      <span>${MESES[i].slice(0, 3)}</span>
+    </div>`).join('');
+}
+
+$('tx-body').addEventListener('click', e => {
+  const ed = e.target.closest('[data-edit]');
+  const dl = e.target.closest('[data-del]');
+  if (ed) startEdit(ed.dataset.edit);
+  if (dl) remove(dl.dataset.del);
+});
+$('search').addEventListener('input', render);
+$('filter-type').addEventListener('change', render);
+$('month-select').addEventListener('change', e => { viewMonth = Number(e.target.value); render(); });
+$('year-select').addEventListener('change', e => { viewYear = Number(e.target.value); render(); });
+$('prev-month').addEventListener('click', () => { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } render(); });
+$('next-month').addEventListener('click', () => { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } render(); });
+
+/* ---------- Copias de seguridad ---------- */
+function download(name, content, type) {
+  const blob = new Blob([content], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+$('export-json').addEventListener('click', () => {
+  download(`finanzas-ospino-${isoToday()}.json`, JSON.stringify({ app: 'Finanzas Ospino', version: 1, movimientos: txs }, null, 2), 'application/json');
+  toast('Copia descargada');
+});
+
+$('export-csv').addEventListener('click', () => {
+  const head = ['Fecha', 'Tipo', 'Categoría', 'Descripción', 'Medio de pago', 'Monto'];
+  const esc = v => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = [...txs].sort((a, b) => a.fecha.localeCompare(b.fecha))
+    .map(t => [t.fecha, t.tipo, t.categoria, t.descripcion || '', t.metodo || '', t.tipo === 'gasto' ? -t.monto : t.monto].map(esc).join(';'));
+  download(`finanzas-ospino-${isoToday()}.csv`, '﻿' + [head.map(esc).join(';'), ...lines].join('\n'), 'text/csv;charset=utf-8');
+  toast('Archivo CSV descargado');
+});
+
+$('import-json').addEventListener('click', () => $('import-file').click());
+$('import-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file || !user) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const list = Array.isArray(data) ? data : data.movimientos;
+      if (!Array.isArray(list)) throw new Error();
+      const existing = new Set(txs.map(t => t.id));
+      const nuevos = list.filter(t => t && t.id && t.fecha && t.tipo && typeof t.monto === 'number' && !existing.has(String(t.id)));
+      uploadMany(nuevos).catch(writeError);
+      toast(`${nuevos.length} movimiento(s) restaurado(s)`);
+    } catch (err) {
+      toast('El archivo no es una copia válida');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+resetForm();
+render();
 </script>
 </body>
 </html>
